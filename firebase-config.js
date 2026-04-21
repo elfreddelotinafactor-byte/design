@@ -27,7 +27,7 @@ window.__FIREBASE_CONFIG = {
 //     It looks like: https://script.google.com/macros/s/XXXX.../exec
 // ─────────────────────────────────────────────────────────────────────────────
 
-window.__SHEETS_URL = "https://script.google.com/macros/s/AKfycbxRrXuyURe451_ZGiaTPJW68NInR0H51sdsuirjzUxORecbR9t7ptzTQBCbBW3L0opvHQ/exec";
+window.__SHEETS_URL = "https://script.google.com/macros/s/AKfycbxSmAk2QLxtLluMrNTtiIfawbnF7V-IAWdQnQkokIdNPPzTOiq0F7g2QuKtYGNJHw9I0g/exec";
 
 
 // ─────────────────────────────────────────────────────────────────────────────
