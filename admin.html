@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin · Brendon &amp; Carla</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="firebase-config.js"></script>
+<style>
+  :root {
+    --bg:     #ffffff;
+    --bg-2:   #faf6ec;
+    --ink:    #2a2218;
+    --ink-2:  #57492f;
+    --ink-3:  #8a7a5a;
+    --gold:   #b8912e;
+    --gold-2: #d8b765;
+    --hair:   rgba(184,145,46,0.28);
+    --red:    #c0392b;
+    --green:  #27ae60;
+    --f-d: 'Cormorant Garamond', serif;
+    --f-m: 'JetBrains Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--f-m); font-size: 13px; font-weight: 300; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  /* ── Gate ── */
+  #gate {
+    min-height: 100vh; display: grid; place-items: center;
+    background: var(--bg-2);
+  }
+  .gate-box { width: 360px; padding: 48px 40px; border: 1px solid var(--hair); background: var(--bg); }
+  .gate-title { font-family: var(--f-d); font-size: 2rem; font-weight: 400; margin-bottom: 8px; }
+  .gate-sub { font-size: 10px; letter-spacing: .25em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 32px; }
+  .gate-box input {
+    width: 100%; border: none; border-bottom: 1px solid var(--hair);
+    padding: 10px 0; font-family: var(--f-m); font-size: 13px;
+    background: transparent; color: var(--ink); outline: none;
+    margin-bottom: 20px;
+  }
+  .gate-btn {
+    width: 100%; background: var(--ink); color: var(--bg-2);
+    border: none; padding: 14px; font-family: var(--f-m);
+    font-size: 10px; letter-spacing: .3em; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .gate-btn:hover { background: var(--gold); }
+  .gate-err { color: var(--red); font-size: 10px; letter-spacing: .2em; margin-top: 12px; display: none; }
+
+  /* ── App ── */
+  #app { display: none; }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hair);
+    padding: 16px 36px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { font-family: var(--f-d); font-size: 1.4rem; }
+  .logo em { font-style: italic; color: var(--gold); }
+  .header-right { display: flex; gap: 16px; align-items: center; }
+  .btn-sm {
+    padding: 8px 18px; border: 1px solid var(--hair);
+    font-family: var(--f-m); font-size: 10px; letter-spacing: .25em; text-transform: uppercase;
+    cursor: pointer; background: transparent; color: var(--ink-2); transition: all .2s;
+  }
+  .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-sm.primary { background: var(--ink); color: var(--bg-2); border-color: var(--ink); }
+  .btn-sm.primary:hover { background: var(--gold); border-color: var(--gold); }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 40px 36px 80px; }
+
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px; }
+  .stat { padding: 28px 24px; border: 1px solid var(--hair); background: var(--bg-2); }
+  .stat-num { font-family: var(--f-d); font-size: 3rem; line-height: 1; color: var(--ink); }
+  .stat-num.green { color: var(--green); }
+  .stat-num.red { color: var(--red); }
+  .stat-label { font-size: 10px; letter-spacing: .25em; text-transform: uppercase; color: var(--ink-3); margin-top: 8px; }
+  @media (max-width: 720px) { .stats { grid-template-columns: 1fr 1fr; } }
+
+  /* ── Section heading ── */
+  .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .sec-title { font-family: var(--f-d); font-size: 1.6rem; font-weight: 400; }
+  .search { padding: 8px 12px; border: 1px solid var(--hair); font-family: var(--f-m); font-size: 12px; width: 220px; background: transparent; color: var(--ink); outline: none; }
+  .search:focus { border-color: var(--gold); }
+
+  /* ── Table ── */
+  .tbl-wrap { overflow-x: auto; margin-bottom: 60px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-size: 9px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3);
+    border-bottom: 1px solid var(--hair); padding: 10px 14px; text-align: left; white-space: nowrap;
+  }
+  td { padding: 14px 14px; border-bottom: 1px solid rgba(184,145,46,.1); font-size: 12px; vertical-align: top; }
+  tr:hover td { background: var(--bg-2); }
+  .badge {
+    display: inline-block; padding: 3px 10px;
+    font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 0;
+  }
+  .badge.yes { color: var(--green); }
+  .badge.no  { color: var(--red); }
+  .empty-row td { text-align: center; padding: 40px; color: var(--ink-3); font-style: italic; }
+
+  /* ── Guestbook ── */
+  .gb-list { display: grid; gap: 14px; }
+  .gb-card { padding: 20px 24px; border: 1px solid var(--hair); background: var(--bg-2); position: relative; }
+  .gb-card-text { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.05rem; color: var(--ink); line-height: 1.6; margin-bottom: 12px; }
+  .gb-card-meta { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); display: flex; gap: 16px; }
+  .gb-card-name { color: var(--gold); }
+
+  .loading { text-align: center; padding: 40px; color: var(--ink-3); letter-spacing: .2em; text-transform: uppercase; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ── Gate ── -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-title">Admin</div>
+    <div class="gate-sub">Brendon &amp; Carla · 10.24.2026</div>
+    <input type="password" id="passInput" placeholder="Passphrase" />
+    <button class="gate-btn" onclick="unlock()">Enter</button>
+    <div class="gate-err" id="gateErr">Incorrect passphrase.</div>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app">
+  <header>
+    <div class="logo">B <em>&amp;</em> C — Admin</div>
+    <div class="header-right">
+      <button class="btn-sm primary" onclick="exportCSV()">Export RSVPs CSV</button>
+      <button class="btn-sm" onclick="lock()">Lock</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="sTotalRsvp">—</div><div class="stat-label">Total RSVPs</div></div>
+      <div class="stat"><div class="stat-num green" id="sAttending">—</div><div class="stat-label">Attending</div></div>
+      <div class="stat"><div class="stat-num red" id="sDeclined">—</div><div class="stat-label">Declined</div></div>
+      <div class="stat"><div class="stat-num" id="sGuests">—</div><div class="stat-label">Total Guests</div></div>
+    </div>
+
+    <!-- RSVP notice -->
+    <div id="rsvpNotice" style="display:none; margin-bottom:24px; padding:16px 20px; border:1px solid var(--hair); font-size:11px; letter-spacing:.15em; color:var(--ink-3);">
+      RSVPs are stored in Google Sheets — open your sheet to see the full list. The stats above reflect what's in the sheet (fetched via the Apps Script endpoint).
+    </div>
+
+    <!-- Guestbook -->
+    <div class="sec-head" style="margin-top:48px;">
+      <div class="sec-title">Guestbook</div>
+      <input class="search" type="text" id="gbSearch" placeholder="Search messages…" oninput="filterGB()" />
+    </div>
+    <div class="gb-list" id="gbList"><div class="loading">Loading…</div></div>
+  </main>
+</div>
+
+<script type="module">
+  import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import { getFirestore, collection, onSnapshot, query, orderBy }
+    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+  window._gbAll = [];
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function fmtDate(ts) {
+    return new Date(ts).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  window.renderGBList = function(list) {
+    const el = document.getElementById('gbList');
+    if (!list.length) { el.innerHTML = '<div class="loading">No messages yet.</div>'; return; }
+    el.innerHTML = list.map(m => `
+      <div class="gb-card">
+        <div class="gb-card-text">${escHtml(m.text)}</div>
+        <div class="gb-card-meta">
+          <span class="gb-card-name">${escHtml(m.name)}</span>
+          <span>${fmtDate(m.when)}</span>
+        </div>
+      </div>`).join('');
+  };
+
+  window.filterGB = function() {
+    const q = document.getElementById('gbSearch').value.toLowerCase();
+    const filtered = window._gbAll.filter(m =>
+      m.name.toLowerCase().includes(q) || m.text.toLowerCase().includes(q)
+    );
+    window.renderGBList(filtered);
+  };
+
+  function initFirebase() {
+    const cfg = window.__FIREBASE_CONFIG;
+    if (!cfg || cfg.apiKey === 'REPLACE_ME') {
+      document.getElementById('gbList').innerHTML = '<div class="loading">Firebase not configured — add keys to firebase-config.js.</div>';
+      return;
+    }
+    const app = initializeApp(cfg);
+    const db  = getFirestore(app);
+    onSnapshot(
+      query(collection(db, 'guestbook'), orderBy('when', 'desc')),
+      (snap) => {
+        window._gbAll = snap.docs.map(d => {
+          const m = d.data();
+          return { name: m.name, text: m.text, when: m.when?.toMillis?.() ?? Date.now() };
+        });
+        window.renderGBList(window._gbAll);
+      },
+      () => { document.getElementById('gbList').innerHTML = '<div class="loading">Could not load guestbook.</div>'; }
+    );
+  }
+
+  // Fetch RSVP stats from Google Sheets endpoint (GET request with action=stats)
+  async function loadStats() {
+    const url = window.__SHEETS_URL;
+    if (!url || url === 'REPLACE_ME') {
+      document.getElementById('rsvpNotice').style.display = 'block';
+      ['sTotalRsvp','sAttending','sDeclined','sGuests'].forEach(id => document.getElementById(id).textContent = '—');
+      return;
+    }
+    try {
+      const res  = await fetch(url + '?action=stats');
+      const data = await res.json();
+      document.getElementById('sTotalRsvp').textContent = data.total   ?? '—';
+      document.getElementById('sAttending').textContent = data.yes     ?? '—';
+      document.getElementById('sDeclined').textContent  = data.no      ?? '—';
+      document.getElementById('sGuests').textContent    = data.guests  ?? '—';
+    } catch {
+      ['sTotalRsvp','sAttending','sDeclined','sGuests'].forEach(id => document.getElementById(id).textContent = '?');
+    }
+  }
+
+  window.exportCSV = async function() {
+    const url = window.__SHEETS_URL;
+    if (!url || url === 'REPLACE_ME') {
+      alert('Add your Google Sheets URL to firebase-config.js first.');
+      return;
+    }
+    try {
+      const res  = await fetch(url + '?action=csv');
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'rsvps-brendon-carla.csv';
+      a.click();
+    } catch {
+      alert('Could not fetch CSV. Check the Apps Script URL.');
+    }
+  };
+
+  window._initApp = function() {
+    initFirebase();
+    loadStats();
+  };
+</script>
+
+<script>
+  const SESSION_KEY = 'bc_admin_ok';
+
+  function unlock() {
+    const pass = document.getElementById('passInput').value;
+    if (pass === window.__ADMIN_PASSPHRASE) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      showApp();
+    } else {
+      document.getElementById('gateErr').style.display = 'block';
+    }
+  }
+
+  document.getElementById('passInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') unlock();
+  });
+
+  function lock() {
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('app').style.display  = 'none';
+    document.getElementById('gate').style.display = 'grid';
+    document.getElementById('passInput').value = '';
+  }
+
+  function showApp() {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display  = 'block';
+    if (typeof window._initApp === 'function') window._initApp();
+  }
+
+  if (sessionStorage.getItem(SESSION_KEY)) showApp();
+</script>
+</body>
+</html>
