@@ -869,18 +869,16 @@
     rsvpBtn.disabled = true; rsvpBtn.textContent = 'Sending…';
 
     try {
-      const res = await fetch(sheetsEndpoint, {
+      // no-cors: avoids CORS block — Apps Script still receives and saves the data,
+      // we just can't read the response (opaque). Show success immediately after send.
+      await fetch(sheetsEndpoint, {
         method:  'POST',
-        headers: { 'Content-Type': 'text/plain' }, // avoids CORS preflight on Apps Script
+        mode:    'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
         body:    JSON.stringify(data),
       });
-      const json = await res.json();
-      if (json.result === 'success') {
-        rsvpForm.style.display = 'none';
-        rsvpSuccess.style.display = 'block';
-      } else {
-        throw new Error(json.error || 'Unknown error');
-      }
+      rsvpForm.style.display = 'none';
+      rsvpSuccess.style.display = 'block';
     } catch (err) {
       console.error('[rsvp]', err);
       alert('Could not send your RSVP. Please try again or contact us directly.');
