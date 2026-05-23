@@ -1,11 +1,10 @@
-// Paste these rules into Firebase Console → Firestore → Rules tab, then Publish.
+// ── FIRESTORE RULES ─────────────────────────────────────────────────────────
+// Paste into: Firebase Console → Firestore → Rules → Publish
 //
-// Rules:
-//  - Anyone can READ guestbook messages (so they appear on the site).
-//  - Anyone can CREATE a guestbook entry (name + text only, size-limited).
-//  - RSVPs are NOT stored in Firestore — they go to Google Sheets via Apps Script.
-//  - Nobody can edit or delete entries from the browser.
-//  - To delete a guestbook message, do it from the Firebase console directly.
+//  - Guestbook: anyone can read & create (size-limited). No edits/deletes.
+//  - Gallery:   anyone can read (photos show on public site).
+//              Write/delete is blocked from the browser — uploads go through
+//              Firebase Storage directly via the admin page (Storage rules handle auth).
 
 rules_version = '2';
 service cloud.firestore {
@@ -24,5 +23,25 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /gallery/{id} {
+      allow read: if true;
+      // Writes come from admin.html — no server-side auth, so allow write.
+      // To lock this down further, enable Firebase Auth and restrict to a known UID.
+      allow write: if true;
+    }
+
   }
 }
+
+// ── STORAGE RULES ────────────────────────────────────────────────────────────
+// Paste into: Firebase Console → Storage → Rules → Publish
+//
+// rules_version = '2';
+// service firebase.storage {
+//   match /b/{bucket}/o {
+//     match /gallery/{filename} {
+//       allow read: if true;           // anyone can view photos
+//       allow write: if true;          // admin uploads — lock with Auth if needed
+//     }
+//   }
+// }

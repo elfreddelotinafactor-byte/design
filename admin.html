@@ -110,6 +110,36 @@
   .gb-card-name { color: var(--gold); }
 
   .loading { text-align: center; padding: 40px; color: var(--ink-3); letter-spacing: .2em; text-transform: uppercase; font-size: 10px; }
+
+  /* ── Gallery manager ── */
+  .gal-upload-area {
+    border: 1px dashed var(--hair); padding: 40px 24px;
+    text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+    margin-bottom: 20px;
+  }
+  .gal-upload-area:hover, .gal-upload-area.drag { border-color: var(--gold); background: rgba(184,145,46,.04); }
+  .gal-upload-area p { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); margin-top: 8px; }
+  .gal-upload-area strong { color: var(--gold); }
+  .gal-progress { margin-bottom: 20px; display: none; }
+  .gal-progress-bar { width: 0; height: 3px; background: var(--gold); transition: width .2s; }
+  .gal-progress-label { font-size: 10px; letter-spacing: .2em; color: var(--ink-3); margin-top: 6px; }
+  .gal-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 60px; }
+  .gal-thumb { position: relative; aspect-ratio: 4/3; overflow: hidden; border: 1px solid var(--hair); }
+  .gal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gal-thumb-del {
+    position: absolute; top: 5px; right: 5px;
+    background: rgba(192,57,43,.88); color: #fff; border: none; cursor: pointer;
+    width: 24px; height: 24px; font-size: 14px; line-height: 24px; text-align: center;
+    opacity: 0; transition: opacity .2s;
+  }
+  .gal-thumb:hover .gal-thumb-del { opacity: 1; }
+  .gal-thumb-order {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(42,34,24,.6); color: rgba(255,255,255,.8);
+    font-size: 9px; letter-spacing: .15em; text-transform: uppercase;
+    padding: 4px 6px; text-align: center;
+  }
+  .gal-empty-msg { font-size: 11px; letter-spacing: .2em; color: var(--ink-3); padding: 20px 0; }
 </style>
 </head>
 <body>
@@ -149,6 +179,29 @@
       RSVPs are stored in Google Sheets — open your sheet to see the full list. The stats above reflect what's in the sheet (fetched via the Apps Script endpoint).
     </div>
 
+    <!-- Gallery -->
+    <div class="sec-head" style="margin-top:48px;">
+      <div class="sec-title">Gallery Photos</div>
+      <span id="galCount" style="font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-3);">— photos</span>
+    </div>
+
+    <div class="gal-upload-area" id="galDropzone" onclick="document.getElementById('galFileInput').click()">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold); margin:0 auto; display:block;">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Click or drag photos here to upload<br><strong>JPG, PNG, WEBP — multiple files OK</strong></p>
+      <input type="file" id="galFileInput" accept="image/*" multiple style="display:none" />
+    </div>
+
+    <div class="gal-progress" id="galProgress">
+      <div class="gal-progress-bar" id="galProgressBar"></div>
+      <div class="gal-progress-label" id="galProgressLabel">Uploading…</div>
+    </div>
+
+    <div class="gal-thumbs" id="galThumbs">
+      <div class="loading">Loading gallery…</div>
+    </div>
+
     <!-- Guestbook -->
     <div class="sec-head" style="margin-top:48px;">
       <div class="sec-title">Guestbook</div>
@@ -159,48 +212,173 @@
 </div>
 
 <script type="module">
-  import { initializeApp }   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-  import { getFirestore, collection, onSnapshot, query, orderBy }
+  import { initializeApp }
+    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp }
     from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject }
+    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
   window._gbAll = [];
+  let db, storage;
 
-  function escHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
   function fmtDate(ts) {
     return new Date(ts).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
   }
 
+  /* ── Guestbook ── */
   window.renderGBList = function(list) {
     const el = document.getElementById('gbList');
     if (!list.length) { el.innerHTML = '<div class="loading">No messages yet.</div>'; return; }
     el.innerHTML = list.map(m => `
       <div class="gb-card">
-        <div class="gb-card-text">${escHtml(m.text)}</div>
+        <div class="gb-card-text">${esc(m.text)}</div>
         <div class="gb-card-meta">
-          <span class="gb-card-name">${escHtml(m.name)}</span>
+          <span class="gb-card-name">${esc(m.name)}</span>
           <span>${fmtDate(m.when)}</span>
         </div>
       </div>`).join('');
   };
-
   window.filterGB = function() {
     const q = document.getElementById('gbSearch').value.toLowerCase();
-    const filtered = window._gbAll.filter(m =>
+    window.renderGBList(window._gbAll.filter(m =>
       m.name.toLowerCase().includes(q) || m.text.toLowerCase().includes(q)
-    );
-    window.renderGBList(filtered);
+    ));
   };
 
+  /* ── Gallery ── */
+  let galleryDocs = [];   // {id, url, storagePath}
+
+  function renderGallery(docs) {
+    galleryDocs = docs;
+    const thumbs = document.getElementById('galThumbs');
+    document.getElementById('galCount').textContent = docs.length + ' photo' + (docs.length !== 1 ? 's' : '');
+    if (!docs.length) {
+      thumbs.innerHTML = '<div class="gal-empty-msg">No photos uploaded yet. Use the area above to add photos.</div>';
+      return;
+    }
+    thumbs.innerHTML = docs.map((d, i) => `
+      <div class="gal-thumb">
+        <img src="${esc(d.url)}" alt="" loading="lazy" />
+        <div class="gal-thumb-order">${i + 1}</div>
+        <button class="gal-thumb-del" title="Delete" onclick="deletePhoto('${esc(d.id)}','${esc(d.storagePath)}')">✕</button>
+      </div>`).join('');
+  }
+
+  window.deletePhoto = async function(docId, storagePath) {
+    if (!confirm('Remove this photo from the gallery?')) return;
+    try {
+      await deleteDoc(doc(db, 'gallery', docId));
+      if (storagePath) {
+        try { await deleteObject(ref(storage, storagePath)); } catch {}
+      }
+    } catch (e) {
+      alert('Could not delete photo: ' + e.message);
+    }
+  };
+
+  /* ── Upload ── */
+  async function uploadFiles(files) {
+    if (!files.length) return;
+    const progress    = document.getElementById('galProgress');
+    const progressBar = document.getElementById('galProgressBar');
+    const progressLbl = document.getElementById('galProgressLabel');
+    progress.style.display = 'block';
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const path = `gallery/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      progressLbl.textContent = `Uploading ${i + 1} of ${files.length}: ${file.name}`;
+
+      await new Promise((resolve, reject) => {
+        const task = uploadBytesResumable(ref(storage, path), file);
+        task.on('state_changed',
+          (snap) => {
+            const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+            progressBar.style.width = pct + '%';
+          },
+          reject,
+          async () => {
+            const url = await getDownloadURL(task.snapshot.ref);
+            await addDoc(collection(db, 'gallery'), { url, storagePath: path, when: serverTimestamp() });
+            resolve();
+          }
+        );
+      }).catch(e => alert('Upload failed for ' + file.name + ': ' + e.message));
+    }
+
+    progressBar.style.width = '0';
+    progress.style.display = 'none';
+    progressLbl.textContent = 'Uploading…';
+    document.getElementById('galFileInput').value = '';
+  }
+
+  /* ── Wire up upload controls ── */
+  function wireUpload() {
+    const input    = document.getElementById('galFileInput');
+    const dropzone = document.getElementById('galDropzone');
+
+    input.addEventListener('change', () => uploadFiles([...input.files]));
+
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('drag');
+      uploadFiles([...e.dataTransfer.files].filter(f => f.type.startsWith('image/')));
+    });
+  }
+
+  /* ── Stats ── */
+  async function loadStats() {
+    const url = window.__SHEETS_URL;
+    if (!url || url === 'REPLACE_ME') {
+      document.getElementById('rsvpNotice').style.display = 'block';
+      ['sTotalRsvp','sAttending','sDeclined','sGuests'].forEach(id => document.getElementById(id).textContent = '—');
+      return;
+    }
+    try {
+      const res  = await fetch(url + '?action=stats');
+      const data = await res.json();
+      document.getElementById('sTotalRsvp').textContent = data.total  ?? '—';
+      document.getElementById('sAttending').textContent = data.yes    ?? '—';
+      document.getElementById('sDeclined').textContent  = data.no     ?? '—';
+      document.getElementById('sGuests').textContent    = data.guests ?? '—';
+    } catch {
+      ['sTotalRsvp','sAttending','sDeclined','sGuests'].forEach(id => document.getElementById(id).textContent = '?');
+    }
+  }
+
+  window.exportCSV = async function() {
+    const url = window.__SHEETS_URL;
+    if (!url || url === 'REPLACE_ME') { alert('Add your Google Sheets URL to firebase-config.js first.'); return; }
+    try {
+      const res  = await fetch(url + '?action=csv');
+      const text = await res.text();
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([text], { type: 'text/csv' })),
+        download: 'rsvps-brendon-carla.csv'
+      });
+      a.click();
+    } catch { alert('Could not fetch CSV. Check the Apps Script URL.'); }
+  };
+
+  /* ── Init ── */
   function initFirebase() {
     const cfg = window.__FIREBASE_CONFIG;
     if (!cfg || cfg.apiKey === 'REPLACE_ME') {
-      document.getElementById('gbList').innerHTML = '<div class="loading">Firebase not configured — add keys to firebase-config.js.</div>';
+      document.getElementById('gbList').innerHTML    = '<div class="loading">Firebase not configured — add keys to firebase-config.js.</div>';
+      document.getElementById('galThumbs').innerHTML = '<div class="loading">Firebase not configured.</div>';
       return;
     }
-    const app = initializeApp(cfg);
-    const db  = getFirestore(app);
+    const app = initializeApp(cfg, 'admin');
+    db      = getFirestore(app);
+    storage = getStorage(app);
+
+    // Guestbook
     onSnapshot(
       query(collection(db, 'guestbook'), orderBy('when', 'desc')),
       (snap) => {
@@ -212,51 +390,20 @@
       },
       () => { document.getElementById('gbList').innerHTML = '<div class="loading">Could not load guestbook.</div>'; }
     );
+
+    // Gallery
+    onSnapshot(
+      query(collection(db, 'gallery'), orderBy('when', 'asc')),
+      (snap) => {
+        renderGallery(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      },
+      () => { document.getElementById('galThumbs').innerHTML = '<div class="loading">Could not load gallery.</div>'; }
+    );
+
+    wireUpload();
   }
 
-  // Fetch RSVP stats from Google Sheets endpoint (GET request with action=stats)
-  async function loadStats() {
-    const url = window.__SHEETS_URL;
-    if (!url || url === 'REPLACE_ME') {
-      document.getElementById('rsvpNotice').style.display = 'block';
-      ['sTotalRsvp','sAttending','sDeclined','sGuests'].forEach(id => document.getElementById(id).textContent = '—');
-      return;
-    }
-    try {
-      const res  = await fetch(url + '?action=stats');
-      const data = await res.json();
-      document.getElementById('sTotalRsvp').textContent = data.total   ?? '—';
-      document.getElementById('sAttending').textContent = data.yes     ?? '—';
-      document.getElementById('sDeclined').textContent  = data.no      ?? '—';
-      document.getElementById('sGuests').textContent    = data.guests  ?? '—';
-    } catch {
-      ['sTotalRsvp','sAttending','sDeclined','sGuests'].forEach(id => document.getElementById(id).textContent = '?');
-    }
-  }
-
-  window.exportCSV = async function() {
-    const url = window.__SHEETS_URL;
-    if (!url || url === 'REPLACE_ME') {
-      alert('Add your Google Sheets URL to firebase-config.js first.');
-      return;
-    }
-    try {
-      const res  = await fetch(url + '?action=csv');
-      const text = await res.text();
-      const blob = new Blob([text], { type: 'text/csv' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'rsvps-brendon-carla.csv';
-      a.click();
-    } catch {
-      alert('Could not fetch CSV. Check the Apps Script URL.');
-    }
-  };
-
-  window._initApp = function() {
-    initFirebase();
-    loadStats();
-  };
+  window._initApp = function() { initFirebase(); loadStats(); };
 </script>
 
 <script>
