@@ -347,8 +347,6 @@
     aspect-ratio: 4/3;
     overflow: hidden;
     position: relative;
-    background: linear-gradient(135deg, var(--bg-2), color-mix(in oklab, var(--bg-2) 70%, var(--accent) 18%));
-    border: 1px solid var(--hair);
   }
   .gal-item img {
     width: 100%; height: 100%;
@@ -356,12 +354,18 @@
     transition: transform .65s cubic-bezier(.25,.46,.45,.94);
   }
   .gal-item:hover img { transform: scale(1.05); }
-  .gal-empty {
-    grid-column: 1 / -1;
-    text-align: center; padding: 80px 20px;
-    font-family: var(--f-mono); font-size: 10px;
-    letter-spacing: .3em; text-transform: uppercase;
-    color: var(--ink-3); border: 1px solid var(--hair);
+  .ph {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--bg-2), color-mix(in oklab, var(--bg-2) 70%, var(--accent) 18%));
+    border: 1px solid var(--hair);
+    display: grid; place-items: center;
+  }
+  .ph-label {
+    font-family: var(--f-mono); font-size: 10.5px;
+    letter-spacing: .25em; text-transform: uppercase;
+    color: var(--ink-3);
+    background: rgba(255,255,255,0.7);
+    padding: 6px 12px; border: 1px solid var(--hair);
   }
   @media (max-width: 760px) { .gal-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 480px) { .gal-grid { grid-template-columns: 1fr; } }
@@ -708,8 +712,17 @@
     <div class="reveal"><span class="eyebrow">Frames from the road</span></div>
     <h2 class="section-title reveal" data-delay="1">14,000 km, <em>one story</em></h2>
 
-    <div class="gal-grid" id="galGrid">
-      <div class="gal-empty" id="galPlaceholder">Photos coming soon ✦</div>
+    <div class="gal-grid">
+      <!-- Replace src="photos/01.jpg" with your actual photo paths when ready -->
+      <div class="gal-item reveal"><div class="ph"><span class="ph-label">Photo 01</span></div></div>
+      <div class="gal-item reveal" data-delay="1"><div class="ph"><span class="ph-label">Photo 02</span></div></div>
+      <div class="gal-item reveal" data-delay="2"><div class="ph"><span class="ph-label">Photo 03</span></div></div>
+      <div class="gal-item reveal"><div class="ph"><span class="ph-label">Photo 04</span></div></div>
+      <div class="gal-item reveal" data-delay="1"><div class="ph"><span class="ph-label">Photo 05</span></div></div>
+      <div class="gal-item reveal" data-delay="2"><div class="ph"><span class="ph-label">Photo 06</span></div></div>
+      <div class="gal-item reveal"><div class="ph"><span class="ph-label">Photo 07</span></div></div>
+      <div class="gal-item reveal" data-delay="1"><div class="ph"><span class="ph-label">Photo 08</span></div></div>
+      <div class="gal-item reveal" data-delay="2"><div class="ph"><span class="ph-label">Photo 09</span></div></div>
     </div>
 
     <div class="miles-strip reveal">
@@ -862,50 +875,5 @@
   }
 </script>
 
-<!-- ─── Gallery loader ─── -->
-<script type="module">
-  import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-  import { getFirestore, collection, onSnapshot, query, orderBy }
-    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-  const cfg = window.__FIREBASE_CONFIG;
-  if (!cfg || cfg.apiKey === 'REPLACE_ME') return;
-
-  const app = getApps().find(a => a.name === 'gallery') ?? initializeApp(cfg, 'gallery');
-  const db  = getFirestore(app);
-
-  const grid        = document.getElementById('galGrid');
-  const placeholder = document.getElementById('galPlaceholder');
-
-  const galIO = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); galIO.unobserve(e.target); } });
-  }, { threshold: 0.08 });
-
-  function safe(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  onSnapshot(
-    query(collection(db, 'gallery'), orderBy('when', 'asc')),
-    (snap) => {
-      grid.querySelectorAll('.gal-item').forEach(el => el.remove());
-      if (snap.empty) { placeholder.style.display = 'block'; return; }
-      placeholder.style.display = 'none';
-      snap.docs.forEach(doc => {
-        const { url, caption } = doc.data();
-        const div = document.createElement('div');
-        div.className = 'gal-item reveal';
-        const img = document.createElement('img');
-        img.src = safe(url);
-        img.alt = safe(caption || 'Wedding photo');
-        img.loading = 'lazy';
-        div.appendChild(img);
-        grid.appendChild(div);
-        galIO.observe(div);
-      });
-    },
-    () => { placeholder.textContent = 'Could not load photos.'; }
-  );
-</script>
 </body>
 </html>
