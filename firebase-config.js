@@ -35,4 +35,4 @@ window.__SHEETS_URL = "https://script.google.com/macros/s/AKfycbxSmAk2QLxtLluMrN
 //  Change this before deploying — it gates the admin dashboard.
 // ─────────────────────────────────────────────────────────────────────────────
 
-window.__ADMIN_PASSPHRASE = "Goose2024";
+window.__ADMIN_PASSPHRASE = "Brendoncarla24";
