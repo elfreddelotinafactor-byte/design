@@ -81,6 +81,7 @@
     position: fixed; top:0; left:0; right:0;
     z-index: 100;
     padding: 18px 36px;
+    display: flex; align-items: center; justify-content: space-between;
     display: flex; align-items: center; justify-content: center;
     transition: background .4s, border-color .4s, padding .3s;
     border-bottom: 1px solid transparent;
@@ -99,6 +100,15 @@
     text-decoration: none; transition: color .2s;
   }
   .nav-links a:hover { color: var(--accent); }
+  .nav-rsvp {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: .28em; text-transform: uppercase; text-decoration: none;
+    color: var(--bg); background: var(--accent);
+    padding: 9px 22px; border-radius: 2px;
+    transition: opacity .2s;
+    white-space: nowrap;
+  }
+  .nav-rsvp:hover { opacity: .8; }
   @media (max-width: 760px) { .nav-links { gap: 18px; } .nav { padding: 14px 20px; flex-wrap: wrap; } }
 
   .reveal {
@@ -486,6 +496,7 @@
     <li><a href="#gallery">Gallery</a></li>
     <li><a href="#guestbook">Guestbook</a></li>
   </ul>
+  <a href="rsvp.html" class="nav-rsvp">RSVP</a>
 </nav>
 
 <!-- ─── Hero ─── -->
