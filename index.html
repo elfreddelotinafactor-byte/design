@@ -112,7 +112,53 @@
     transition: opacity .2s; white-space: nowrap;
   }
   .nav-rsvp:hover { opacity: .8; }
-  @media (max-width: 760px) { .nav { grid-template-columns: 1fr; padding: 14px 20px; gap: 10px; } .nav-links { gap: 18px; flex-wrap: wrap; } .nav-rsvp-wrap { justify-content: center; } }
+  .ham-btn {
+    display: none; flex-direction: column; gap: 5px;
+    background: none; border: none; cursor: pointer; padding: 6px;
+  }
+  .ham-btn span {
+    display: block; width: 22px; height: 1.5px;
+    background: var(--ink); border-radius: 1px;
+    transition: transform .3s, opacity .3s;
+  }
+  .ham-btn.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
+  .ham-btn.open span:nth-child(2) { opacity: 0; }
+  .ham-btn.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
+
+  @media (max-width: 760px) {
+    .nav { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; }
+    .nav-links { display: none; }
+    .nav-rsvp-wrap { display: none; }
+    .ham-btn { display: flex; }
+  }
+
+  .mob-menu {
+    position: fixed; top: 52px; left: 0; right: 0;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--hair);
+    z-index: 99; padding: 0 24px 24px;
+    pointer-events: none; opacity: 0; transform: translateY(-6px);
+    transition: opacity .25s, transform .25s;
+  }
+  .mob-menu.open { pointer-events: auto; opacity: 1; transform: translateY(0); }
+  .mob-links { list-style: none; }
+  .mob-links a {
+    display: block; padding: 16px 0;
+    font-family: var(--f-mono); font-size: 11px;
+    letter-spacing: .28em; text-transform: uppercase;
+    color: var(--ink-2); text-decoration: none;
+    border-bottom: 1px solid var(--hair-soft);
+    transition: color .2s;
+  }
+  .mob-links li:last-child a { border-bottom: none; }
+  .mob-links a:hover { color: var(--accent); }
+  .mob-rsvp {
+    display: block; margin-top: 16px;
+    background: var(--accent); color: var(--bg) !important;
+    text-align: center; padding: 14px 22px !important;
+    border-radius: 50px; border-bottom: none !important;
+  }
 
   .reveal {
     opacity: 0;
@@ -484,6 +530,28 @@
     .detail-block { padding: 36px 24px; }
     .gate-form { padding: 32px 24px; }
   }
+
+  /* ─── Mobile-first global overrides ─── */
+  @media (max-width: 760px) {
+    .container { padding: 0 20px; }
+    .hero { padding: 64px 20px 48px; min-height: 100svh; }
+    .hero-meta { margin-bottom: 24px; }
+    .hero-caption { margin-top: 24px; }
+    .hairline { margin-top: 32px; height: 48px; }
+    .countdown { padding: 64px 20px; }
+    .details { padding: 64px 20px; }
+    .entourage { padding: 64px 20px; }
+    .attire { padding: 64px 20px; }
+    .gallery { padding: 64px 20px; }
+    .guestbook { padding: 64px 20px; }
+    footer { padding: 56px 20px 32px; }
+    .miles-strip { margin-top: 48px; padding: 40px 20px; }
+    .schedule { margin-top: 48px; }
+    .attire-grid { margin-top: 40px; gap: 36px; }
+    .details-grid { margin-top: 40px; }
+    .gb-form { padding: 24px 20px; }
+    .gb-wrap { margin-top: 40px; gap: 40px; }
+  }
 </style>
 </head>
 <body>
@@ -503,7 +571,21 @@
   <div class="nav-rsvp-wrap">
     <a href="rsvp.html" class="nav-rsvp">RSVP</a>
   </div>
+  <button class="ham-btn" id="hamBtn" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<div class="mob-menu" id="mobMenu">
+  <ul class="mob-links">
+    <li><a href="#details">Details</a></li>
+    <li><a href="#attire">Attire</a></li>
+    <li><a href="#entourage">Entourage</a></li>
+    <li><a href="#gallery">Gallery</a></li>
+    <li><a href="#guestbook">Guestbook</a></li>
+    <li><a href="rsvp.html" class="mob-rsvp">RSVP</a></li>
+  </ul>
+</div>
 
 <!-- ─── Hero ─── -->
 <section class="hero">
@@ -791,6 +873,22 @@
   <div class="footer-meta">10 · 24 · 2026 &nbsp;·&nbsp; The View Davao</div>
   <div class="footer-meta" style="margin-top:12px; opacity:.6;">Five years · 14,000 km · finally home</div>
 </footer>
+
+<!-- ─── Hamburger menu ─── -->
+<script>
+  const hamBtn = document.getElementById('hamBtn');
+  const mobMenu = document.getElementById('mobMenu');
+  hamBtn.addEventListener('click', () => {
+    hamBtn.classList.toggle('open');
+    mobMenu.classList.toggle('open');
+  });
+  mobMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      hamBtn.classList.remove('open');
+      mobMenu.classList.remove('open');
+    });
+  });
+</script>
 
 <!-- ─── Core scripts ─── -->
 <script>
